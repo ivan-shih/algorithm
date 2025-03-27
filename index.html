@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>尋找最小分割索引教學（逐步可視化）</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .code-block {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+            border-left: 4px solid #3498db;
+        }
+        
+        .test-case {
+            background-color: #e8f4fc;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #2980b9;
+        }
+        
+        .interactive-section {
+            background-color: #e8f7ee;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .visualization {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #fff3cd;
+            border-radius: 5px;
+        }
+        
+        .array-display {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .array-element {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #3498db;
+            color: white;
+            margin: 5px;
+            border-radius: 5px;
+            font-weight: bold;
+            position: relative;
+            transition: all 0.3s;
+        }
+        
+        .split-line {
+            position: absolute;
+            height: 60px;
+            width: 2px;
+            background-color: red;
+            top: -5px;
+            left: -7px;
+        }
+        
+        .dominant {
+            background-color: #28a745;
+        }
+        
+        .current {
+            box-shadow: 0 0 0 3px #ffc107;
+            transform: scale(1.1);
+        }
+        
+        .explanation {
+            margin-top: 10px;
+            font-style: italic;
+            color: #6c757d;
+        }
+        
+        .tab {
+            display: none;
+        }
+        
+        .tab.active {
+            display: block;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        
+        .tab-button {
+            padding: 10px 15px;
+            background-color: #e9ecef;
+            border: none;
+            cursor: pointer;
+            margin-right: 5px;
+            border-radius: 4px 4px 0 0;
+        }
+        
+        .tab-button.active {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .step-controls {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        
+        .step-info {
+            text-align: center;
+            margin: 10px 0;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .code-highlight {
+            background-color: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>尋找最小分割索引教學（逐步可視化）</h1>
+    
+    <div class="container">
+        <h2>一、題目說明</h2>
+        <p>給定一個數組，其中有一個數字是絕對多數（dominant），也就是數量超過數組長度的一半。我們需要找到一個最小的分割索引，讓這個數組被分成左右兩個子數組後，每個子數組都有相同的絕對多數數字。如果沒有符合條件的分割點，就回傳 -1。</p>
+    </div>
+    
+    <div class="container">
+        <h2>二、關鍵核心點</h2>
+        <ul>
+            <li><strong>核心關鍵：</strong> 判斷每個分割點左右兩邊的數組中，是否都存在相同的絕對多數元素。</li>
+            <li><strong>解決方法：</strong> 使用哈希表統計絕對多數元素的總數量，然後使用前綴和的概念，逐步統計數字出現的次數。</li>
+        </ul>
+    </div>
+    
+    <div class="container interactive-section">
+        <h2>三、互動演示</h2>
+        
+        <div class="input-group">
+            <label for="array-input">輸入數組（用逗號分隔數字）：</label>
+            <input type="text" id="array-input" placeholder="例如: 1,2,2,2" value="1,2,2,2">
+        </div>
+        
+        <button onclick="initDemo()">開始演示</button>
+        
+        <div id="result" class="result" style="display: none;"></div>
+        
+        <div id="visualization" class="visualization" style="display: none;">
+            <h3>逐步可視化</h3>
+            
+            <div class="step-controls">
+                <button id="prev-step" onclick="prevStep()" disabled>上一步</button>
+                <button id="next-step" onclick="nextStep()" disabled>下一步</button>
+            </div>
+            
+            <div id="step-info" class="step-info"></div>
+            
+            <div id="array-display" class="array-display"></div>
+            
+            <div id="code-trace" class="code-block" style="display: none;"></div>
+            
+            <div id="explanation" class="explanation"></div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>四、解決方案</h2>
+        
+        <div class="tab-buttons">
+            <button class="tab-button active" onclick="openTab('hash-tab')">Hash Table 解法</button>
+            <button class="tab-button" onclick="openTab('boyer-tab')">Boyer-Moore 解法</button>
+        </div>
+        
+        <div id="hash-tab" class="tab active">
+            <h3>Hash Table + Prefix Sum 解法</h3>
+            <p><strong>時間複雜度：</strong> O(N)</p>
+            <p><strong>空間複雜度：</strong> O(N)</p>
+            
+            <div class="code-block" id="full-code">
+                function minimumIndexHash(nums) {
+                    <span class="code-step" data-step="1">const count = {};</span>
+                    <span class="code-step" data-step="1">let dominant = nums[0];</span>
+                    
+                    <span class="code-step" data-step="2">// 找出絕對多數元素</span>
+                    <span class="code-step" data-step="2">for (const num of nums) {</span>
+                    <span class="code-step" data-step="2">    count[num] = (count[num] || 0) + 1;</span>
+                    <span class="code-step" data-step="2">    if (count[num] * 2 > nums.length) {</span>
+                    <span class="code-step" data-step="2">        dominant = num;</span>
+                    <span class="code-step" data-step="2">    }</span>
+                    <span class="code-step" data-step="2">}</span>
+                    
+                    <span class="code-step" data-step="3">const dominantTotal = count[dominant] || 0;</span>
+                    <span class="code-step" data-step="3">let leftDominant = 0;</span>
+                    
+                    <span class="code-step" data-step="4">// 尋找最小有效分割索引</span>
+                    <span class="code-step" data-step="4">for (let i = 0; i < nums.length - 1; i++) {</span>
+                    <span class="code-step" data-step="5">    if (nums[i] === dominant) {</span>
+                    <span class="code-step" data-step="5">        leftDominant++;</span>
+                    <span class="code-step" data-step="5">    }</span>
+                    
+                    <span class="code-step" data-step="6">    // 檢查左右子數組是否符合條件</span>
+                    <span class="code-step" data-step="6">    if (leftDominant * 2 > (i + 1) &&</span>
+                    <span class="code-step" data-step="6">        (dominantTotal - leftDominant) * 2 > (nums.length - i - 1)) {</span>
+                    <span class="code-step" data-step="7">        return i;</span>
+                    <span class="code-step" data-step="7">    }</span>
+                    <span class="code-step" data-step="4">}</span>
+                    
+                    <span class="code-step" data-step="8">return -1;</span>
+                }
+            </div>
+        </div>
+        
+        <div id="boyer-tab" class="tab">
+            <h3>Boyer-Moore Voting Algorithm + Prefix Sum 解法</h3>
+            <p><strong>時間複雜度：</strong> O(N)</p>
+            <p><strong>空間複雜度：</strong> O(1)</p>
+            
+            <div class="code-block">
+                function minimumIndexBoyer(nums) {
+                    let candidate = nums[0];
+                    let count = 0;
+                    
+                    // Boyer-Moore 投票算法找絕對多數元素
+                    for (const num of nums) {
+                        if (count === 0) {
+                            candidate = num;
+                        }
+                        count += (num === candidate) ? 1 : -1;
+                    }
+                    
+                    // 計算絕對多數元素的總數
+                    let dominantTotal = 0;
+                    for (const num of nums) {
+                        if (num === candidate) {
+                            dominantTotal++;
+                        }
+                    }
+                    
+                    let leftDominant = 0;
+                    
+                    // 尋找最小有效分割索引
+                    for (let i = 0; i < nums.length - 1; i++) {
+                        if (nums[i] === candidate) {
+                            leftDominant++;
+                        }
+                        
+                        // 檢查左右子數組是否符合條件
+                        if (leftDominant * 2 > (i + 1) &&
+                            (dominantTotal - leftDominant) * 2 > (nums.length - i - 1)) {
+                            return i;
+                        }
+                    }
+                    
+                    return -1;
+                }
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 演示狀態變量
+        let demoState = {
+            currentStep: 0,
+            totalSteps: 0,
+            nums: [],
+            dominant: null,
+            dominantTotal: 0,
+            leftDominant: 0,
+            result: -1,
+            steps: []
+        };
+        
+        function openTab(tabId) {
+            // 隱藏所有標籤頁
+            const tabs = document.getElementsByClassName('tab');
+            for (const tab of tabs) {
+                tab.classList.remove('active');
+            }
+            
+            // 取消所有按鈕的 active 類
+            const tabButtons = document.getElementsByClassName('tab-button');
+            for (const button of tabButtons) {
+                button.classList.remove('active');
+            }
+            
+            // 顯示選中的標籤頁
+            document.getElementById(tabId).classList.add('active');
+            
+            // 設置按鈕為 active
+            event.currentTarget.classList.add('active');
+        }
+        
+        function initDemo() {
+            const input = document.getElementById('array-input').value;
+            demoState.nums = input.split(',').map(num => parseInt(num.trim()));
+            
+            // 初始化演示狀態
+            demoState.currentStep = 0;
+            demoState.dominant = findDominant(demoState.nums);
+            demoState.dominantTotal = countOccurrences(demoState.nums, demoState.dominant);
+            demoState.leftDominant = 0;
+            demoState.result = -1;
+            demoState.steps = [];
+            
+            // 生成步驟
+            generateSteps();
+            
+            // 顯示可視化區域
+            document.getElementById('visualization').style.display = 'block';
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('result').textContent = `演示已準備就緒，點擊「下一步」開始`;
+            document.getElementById('result').className = 'result';
+            
+            // 啟用下一步按鈕
+            document.getElementById('next-step').disabled = false;
+            document.getElementById('prev-step').disabled = true;
+            
+            // 顯示第一步
+            showCurrentStep();
+        }
+        
+        function generateSteps() {
+            // 步驟1: 初始化
+            demoState.steps.push({
+                step: 1,
+                message: "初始化哈希表和絕對多數變量",
+                codeStep: 1,
+                highlightIndex: -1,
+                leftDominant: 0
+            });
+            
+            // 步驟2: 找出絕對多數元素
+            demoState.steps.push({
+                step: 2,
+                message: `計算數組中每個數字的出現次數，確定絕對多數元素為 ${demoState.dominant}`,
+                codeStep: 2,
+                highlightIndex: -1,
+                leftDominant: 0
+            });
+            
+            // 步驟3: 初始化前綴和變量
+            demoState.steps.push({
+                step: 3,
+                message: `初始化變量：絕對多數元素總數 = ${demoState.dominantTotal}, 左子數組計數 = 0`,
+                codeStep: 3,
+                highlightIndex: -1,
+                leftDominant: 0
+            });
+            
+            // 遍歷數組生成步驟
+            for (let i = 0; i < demoState.nums.length; i++) {
+                const num = demoState.nums[i];
+                const isDominant = num === demoState.dominant;
+                
+                // 步驟4: 進入循環
+                demoState.steps.push({
+                    step: 4,
+                    message: `檢查索引 ${i} 的元素 ${num}`,
+                    codeStep: 4,
+                    highlightIndex: i,
+                    leftDominant: demoState.leftDominant
+                });
+                
+                if (isDominant) {
+                    // 步驟5: 如果是絕對多數元素，增加計數
+                    demoState.leftDominant++;
+                    demoState.steps.push({
+                        step: 5,
+                        message: `找到絕對多數元素 ${num}，左子數組計數增加為 ${demoState.leftDominant}`,
+                        codeStep: 5,
+                        highlightIndex: i,
+                        leftDominant: demoState.leftDominant
+                    });
+                }
+                
+                // 步驟6: 檢查分割條件
+                const leftValid = demoState.leftDominant * 2 > (i + 1);
+                const rightValid = (demoState.dominantTotal - demoState.leftDominant) * 2 > (demoState.nums.length - i - 1);
+                
+                demoState.steps.push({
+                    step: 6,
+                    message: `檢查分割條件：
+                    - 左子數組: ${demoState.leftDominant} * 2 > ${i + 1} → ${leftValid}
+                    - 右子數組: ${demoState.dominantTotal - demoState.leftDominant} * 2 > ${demoState.nums.length - i - 1} → ${rightValid}`,
+                    codeStep: 6,
+                    highlightIndex: i,
+                    leftDominant: demoState.leftDominant,
+                    checkSplit: true,
+                    splitValid: leftValid && rightValid,
+                    splitIndex: i
+                });
+                
+                if (leftValid && rightValid) {
+                    // 步驟7: 找到有效分割點
+                    demoState.result = i;
+                    demoState.steps.push({
+                        step: 7,
+                        message: `找到有效分割點！最小分割索引為 ${i}`,
+                        codeStep: 7,
+                        highlightIndex: i,
+                        leftDominant: demoState.leftDominant,
+                        isResult: true,
+                        result: i
+                    });
+                    break;
+                }
+            }
+            
+            // 步驟8: 沒有找到有效分割點
+            if (demoState.result === -1) {
+                demoState.steps.push({
+                    step: 8,
+                    message: "沒有找到有效的分割索引，回傳 -1",
+                    codeStep: 8,
+                    highlightIndex: -1,
+                    leftDominant: demoState.leftDominant,
+                    isResult: true,
+                    result: -1
+                });
+            }
+            
+            demoState.totalSteps = demoState.steps.length;
+        }
+        
+        function showCurrentStep() {
+            const step = demoState.steps[demoState.currentStep];
+            const stepInfo = document.getElementById('step-info');
+            const arrayDisplay = document.getElementById('array-display');
+            const explanation = document.getElementById('explanation');
+            const codeTrace = document.getElementById('code-trace');
+            
+            // 更新步驟信息
+            stepInfo.textContent = `步驟 ${demoState.currentStep + 1}/${demoState.totalSteps}: ${step.message}`;
+            
+            // 更新數組顯示
+            arrayDisplay.innerHTML = '';
+            for (let i = 0; i < demoState.nums.length; i++) {
+                const element = document.createElement('div');
+                element.className = 'array-element';
+                if (demoState.nums[i] === demoState.dominant) {
+                    element.classList.add('dominant');
+                }
+                if (i === step.highlightIndex) {
+                    element.classList.add('current');
+                }
+                element.textContent = demoState.nums[i];
+                
+                // 如果是檢查分割點的步驟，顯示分割線
+                if (step.checkSplit && i === step.splitIndex) {
+                    const splitLine = document.createElement('div');
+                    splitLine.className = 'split-line';
+                    element.appendChild(splitLine);
+                }
+                
+                arrayDisplay.appendChild(element);
+            }
+            
+            // 更新代碼追蹤
+            codeTrace.style.display = 'block';
+            codeTrace.innerHTML = '';
+            const codeSteps = document.querySelectorAll(`.code-step[data-step="${step.codeStep}"]`);
+            codeSteps.forEach(step => {
+                const div = document.createElement('div');
+                div.textContent = step.textContent;
+                codeTrace.appendChild(div);
+            });
+            
+            // 更新解釋
+            explanation.innerHTML = '';
+            if (step.isResult) {
+                if (step.result !== -1) {
+                    explanation.innerHTML = `
+                        <p>找到有效分割點！最小分割索引為 ${step.result}</p>
+                        <p>絕對多數元素是 <strong>${demoState.dominant}</strong>。</p>
+                        <p>分割點在索引 ${step.result}：</p>
+                        <ul>
+                            <li>左子數組: [${demoState.nums.slice(0, step.result + 1).join(',')}] → ${demoState.dominant} 出現 ${step.leftDominant} 次 (${step.leftDominant} * 2 > ${step.result + 1})</li>
+                            <li>右子數組: [${demoState.nums.slice(step.result + 1).join(',')}] → ${demoState.dominant} 出現 ${demoState.dominantTotal - step.leftDominant} 次 (${demoState.dominantTotal - step.leftDominant} * 2 > ${demoState.nums.length - step.result - 1})</li>
+                        </ul>
+                    `;
+                    document.getElementById('result').textContent = `結果：最小分割索引是 ${step.result}`;
+                    document.getElementById('result').className = 'result success';
+                } else {
+                    explanation.innerHTML = `
+                        <p>沒有找到有效的分割索引。</p>
+                        <p>絕對多數元素是 <strong>${demoState.dominant}</strong>，但無法滿足分割後兩邊都有絕對多數的條件。</p>
+                    `;
+                    document.getElementById('result').textContent = `結果：沒有找到有效的分割索引（回傳 -1）`;
+                    document.getElementById('result').className = 'result error';
+                }
+            }
+            
+            // 更新按鈕狀態
+            document.getElementById('prev-step').disabled = demoState.currentStep === 0;
+            document.getElementById('next-step').disabled = demoState.currentStep === demoState.totalSteps - 1;
+        }
+        
+        function nextStep() {
+            if (demoState.currentStep < demoState.totalSteps - 1) {
+                demoState.currentStep++;
+                showCurrentStep();
+            }
+        }
+        
+        function prevStep() {
+            if (demoState.currentStep > 0) {
+                demoState.currentStep--;
+                showCurrentStep();
+            }
+        }
+        
+        function findDominant(nums) {
+            const count = {};
+            let dominant = nums[0];
+            
+            for (const num of nums) {
+                count[num] = (count[num] || 0) + 1;
+                if (count[num] * 2 > nums.length) {
+                    dominant = num;
+                }
+            }
+            
+            return dominant;
+        }
+        
+        function countOccurrences(nums, value) {
+            return nums.filter(num => num === value).length;
+        }
+    </script>
+</body>
+</html>
